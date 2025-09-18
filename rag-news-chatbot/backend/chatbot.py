@@ -83,7 +83,7 @@ def search_qdrant(query: str, top_k: int = 3):
 async def ask(payload: dict):
     question = (payload.get("query") or "").strip()
     if not question:
-        return {"history": [], "answer": "⚠️ Please provide a query.", "sources": []}
+        return {"history": [], "answer": " Please provide a query.", "sources": []}
 
     hits = search_qdrant(question, top_k=3)
     if not hits:
@@ -140,5 +140,5 @@ async def get_history():
 
 #  Run on Render / Local
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))  
+    port = int(os.getenv("PORT", 8005))  
     uvicorn.run("chatbot:app", host="0.0.0.0", port=port, reload=False)

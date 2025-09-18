@@ -1,18 +1,22 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// Auto-detect backend URL
+const API_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://127.0.0.1:8005"
+    : "https://voosh-ai-newsbot.onrender.com";
 
 function App() {
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // This method will load the history on startup of the bot.
+  //  Load history on startup
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/history`);
+        const res = await axios.get(`${API_URL}/history`);
         setHistory(res.data.history);
       } catch (err) {
         console.error("Error fetching history:", err);
@@ -21,12 +25,12 @@ function App() {
     fetchHistory();
   }, []);
 
-  // Ask the backend to process the query.
+  //  Ask backend
   const handleAsk = async () => {
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE}/ask`, { query });
+      const res = await axios.post(`${API_URL}/ask`, { query });
       setHistory(res.data.history);
       setQuery("");
     } catch (err) {
@@ -36,17 +40,17 @@ function App() {
     }
   };
 
-  // Reset the session/history.
+  //  Reset session
   const handleReset = async () => {
     try {
-      const res = await axios.post(`${API_BASE}/clear_session`);
+      const res = await axios.post(`${API_URL}/clear_session`);
       setHistory(res.data.history);
     } catch (err) {
       console.error("Reset failed:", err);
     }
   };
 
-  // Helper func: render message as a chat bubble to look more realistic.
+  //  Chat bubble renderer
   const renderMessage = (msg, i) => {
     if (typeof msg !== "string") return null;
 
@@ -55,6 +59,7 @@ function App() {
 
     let content = msg.replace(/^You:\s*/, "").replace(/^Bot:\s*/, "");
 
+    // Split summary and sources
     let mainText = content;
     let sourcesBlock = "";
     if (isBot && content.includes("Sources:")) {
@@ -83,6 +88,7 @@ function App() {
         >
           <p style={{ margin: 0 }}>{mainText.trim()}</p>
 
+          
           {isBot && sourcesBlock && (
             <div style={{ marginTop: "8px" }}>
               <strong>Sources:</strong>
@@ -96,7 +102,11 @@ function App() {
                     const parts = src.split(" - ");
                     const title = parts[0] || "Link";
                     let url = parts[1] || parts[0];
-                    if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+                    if (
+                      url &&
+                      !url.startsWith("http://") &&
+                      !url.startsWith("https://")
+                    ) {
                       url = "https://" + url;
                     }
                     return (
@@ -105,7 +115,10 @@ function App() {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: "#2563eb", textDecoration: "underline" }}
+                          style={{
+                            color: "#2563eb",
+                            textDecoration: "underline",
+                          }}
                         >
                           {title}
                         </a>
@@ -178,7 +191,7 @@ function App() {
           )}
         </div>
 
-        {/* Input Area */}
+        
         <div style={{ display: "flex", gap: "10px" }}>
           <input
             type="text"

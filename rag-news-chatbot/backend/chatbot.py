@@ -1,3 +1,4 @@
+# backend/chatbot.py
 import os, json
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -6,32 +7,34 @@ from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 import google.generativeai as genai
 import redis
+import uvicorn
 
-
+# Load .env
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENV_PATH = os.path.join(BASE_DIR, ".env")
-load_dotenv(dotenv_path=ENV_PATH)
+if os.path.exists(ENV_PATH):
+    load_dotenv(dotenv_path=ENV_PATH)
 
-# Gemini API Setup
+#  Gemini API Setup
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
-    raise ValueError("Set GEMINI_API_KEY in .env")
+    raise ValueError("Set GEMINI_API_KEY in environment")
 genai.configure(api_key=GEMINI_API_KEY)
 gemini_model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Qdrant Cloud Setup
+#  Qdrant Cloud Setup
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "news_articles")
 if not QDRANT_URL:
-    raise ValueError("Set QDRANT_URL in .env")
+    raise ValueError("Set QDRANT_URL in environment")
 
 qclient = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-print("Qdrant:", QDRANT_URL, "collection:", QDRANT_COLLECTION)
+print(f" Connected to Qdrant: {QDRANT_URL}, collection: {QDRANT_COLLECTION}")
 
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
-# Redis Cloud (Upstash) Setup 
+#  Redis Cloud (Upstash)
 REDIS_URL = os.getenv("REDIS_URL")
 if REDIS_URL:
     r = redis.from_url(REDIS_URL, decode_responses=True)
@@ -40,17 +43,22 @@ else:
 
 HISTORY_KEY = "chat_history"
 
-#  FastAPI Setup
+# FastAPI App Setup
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Qdrant Cloud Search 
+# Root endpoint (health check)
+@app.get("/")
+async def root():
+    return {"message": "VooshAI NewsBot backend is running!"}
+
+#  Qdrant Search
 def search_qdrant(query: str, top_k: int = 3):
     q_vec = embed_model.encode(query).tolist()
     results = qclient.search(
@@ -70,12 +78,12 @@ def search_qdrant(query: str, top_k: int = 3):
         })
     return hits
 
-# API Routes Defined.
+#  Ask Endpoint
 @app.post("/ask")
 async def ask(payload: dict):
     question = (payload.get("query") or "").strip()
     if not question:
-        return {"history": [], "answer": " Please provide a query.", "sources": []}
+        return {"history": [], "answer": "⚠️ Please provide a query.", "sources": []}
 
     hits = search_qdrant(question, top_k=3)
     if not hits:
@@ -104,7 +112,7 @@ Here are the articles:
 Question: {question}
 """
     resp = gemini_model.generate_content(prompt)
-    summary = resp.text if resp and resp.text else "No answer generated."
+    summary = resp.text if resp and resp.text else " No answer generated."
 
     sources_text_lines = []
     for s in sources:
@@ -118,12 +126,19 @@ Question: {question}
 
     return {"history": r.lrange(HISTORY_KEY, 0, -1), "answer": answer, "sources": sources}
 
+#  Clear the Session
 @app.post("/clear_session")
 async def clear_session():
     r.delete(HISTORY_KEY)
     return {"message": "Chat history cleared", "history": []}
 
+#  Get the History
 @app.get("/history")
 async def get_history():
     history = r.lrange(HISTORY_KEY, 0, -1)
     return {"history": history}
+
+#  Run on Render / Local
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))  
+    uvicorn.run("chatbot:app", host="0.0.0.0", port=port, reload=False)

@@ -10,7 +10,7 @@ function App() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await axios.get("http://127.0.0.1:8000/history");
+        const res = await axios.get("https://voosh-ai-newsbot.onrender.com/history");
         setHistory(res.data.history);
       } catch (err) {
         console.error("Error fetching history:", err);
@@ -24,7 +24,7 @@ function App() {
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await axios.post("http://127.0.0.1:8000/ask", { query });
+      const res = await axios.post("https://voosh-ai-newsbot.onrender.com/ask", { query });
       setHistory(res.data.history);
       setQuery("");
     } catch (err) {
@@ -37,7 +37,7 @@ function App() {
   //  Reset the session/history.
   const handleReset = async () => {
     try {
-      const res = await axios.post("http://127.0.0.1:8000/clear_session");
+      const res = await axios.post("https://voosh-ai-newsbot.onrender.com/clear_session");
       setHistory(res.data.history);
     } catch (err) {
       console.error("Reset failed:", err);
@@ -53,7 +53,6 @@ function App() {
 
     let content = msg.replace(/^You:\s*/, "").replace(/^Bot:\s*/, "");
 
-    
     let mainText = content;
     let sourcesBlock = "";
     if (isBot && content.includes("Sources:")) {
@@ -82,7 +81,6 @@ function App() {
         >
           <p style={{ margin: 0 }}>{mainText.trim()}</p>
 
-          
           {isBot && sourcesBlock && (
             <div style={{ marginTop: "8px" }}>
               <strong>Sources:</strong>
@@ -90,7 +88,7 @@ function App() {
                 {sourcesBlock
                   .trim()
                   .split("\n")
-                  .map((line) => line.replace(/^[\*\-\s]+/, "").trim()) 
+                  .map((line) => line.replace(/^[\*\-\s]+/, "").trim())
                   .filter((line) => line.length > 0)
                   .map((src, j) => {
                     const parts = src.split(" - ");
@@ -143,7 +141,7 @@ function App() {
         }}
       >
         <h1 style={{ textAlign: "center", fontSize: "28px", marginBottom: "10px" }}>
-           VooshAI NewsBot 🤖
+          VooshAI NewsBot 🤖
         </h1>
         <p
           style={{

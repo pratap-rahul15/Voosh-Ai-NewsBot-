@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
 function App() {
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState([]);
@@ -10,7 +12,7 @@ function App() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await axios.get("https://voosh-ai-newsbot.onrender.com/history");
+        const res = await axios.get(`${API_BASE}/history`);
         setHistory(res.data.history);
       } catch (err) {
         console.error("Error fetching history:", err);
@@ -19,12 +21,12 @@ function App() {
     fetchHistory();
   }, []);
 
-  //  Ask the backend to process the query.
+  // Ask the backend to process the query.
   const handleAsk = async () => {
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await axios.post("https://voosh-ai-newsbot.onrender.com/ask", { query });
+      const res = await axios.post(`${API_BASE}/ask`, { query });
       setHistory(res.data.history);
       setQuery("");
     } catch (err) {
@@ -34,17 +36,17 @@ function App() {
     }
   };
 
-  //  Reset the session/history.
+  // Reset the session/history.
   const handleReset = async () => {
     try {
-      const res = await axios.post("https://voosh-ai-newsbot.onrender.com/clear_session");
+      const res = await axios.post(`${API_BASE}/clear_session`);
       setHistory(res.data.history);
     } catch (err) {
       console.error("Reset failed:", err);
     }
   };
 
-  //  Helper func: render message as a chat bubble to look more realistic.
+  // Helper func: render message as a chat bubble to look more realistic.
   const renderMessage = (msg, i) => {
     if (typeof msg !== "string") return null;
 
@@ -155,7 +157,7 @@ function App() {
           articles in real-time using RAG (Retrieval-Augmented Generation).
         </p>
 
-        {/* Chat Window for the Voosh AI Bot */}
+        {/* Chat Window */}
         <div
           style={{
             background: "#f3f4f6",
